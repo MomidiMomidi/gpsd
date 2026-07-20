@@ -105,6 +105,7 @@ PERMISSIONS
  *      $GL -- GLONASS, according to IEIC 61162-1
  *      $GN -- Mixed GPS and GLONASS data, according to IEIC 61162-1
  *      $GP -- Global Positioning System.
+ *      $GQ -- QZSS
  *      $GY -- Unicore Gyro
  *      $HC -- Heading/compass (Airmar PB200).
  *      $II -- Integrated Instrumentation (Raytheon's SeaTalk system).
@@ -698,6 +699,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
             'L' == c ||      // $GL, GLONASS only
             'N' == c ||      // $GN, mixed
             'P' == c ||      // $GP, GPS
+            'Q' == c ||      // $GQ, QZSS
             'Y' == c) {      // $GY, Gyro  (IMU)
             lexer->state = NMEA_LEADER_END;
         } else {
@@ -1365,13 +1367,13 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
     case SPARTN_PAYDESC_8:
         // 2 bit Enc Seq Num, 1 bit Auth Ind, 3 Embed Auth Len
         lexer->state = SPARTN_PAYLOAD;
-        lexer->length += spartn_auth_len(c & 3);
+        lexer->length += spartn_auth_len(c & 7);
         GPSD_LOG(LOG_RAW, &lexer->errout,
                  "SPARTN: PD8 x%02x length %zu eaf %u timetagtype %u "
                   "eal %u/%u\n",
                   c, lexer->length, (lexer->inbuffer[3] >> 6) & 1,
                   (lexer->inbuffer[4] >> 3) & 1,
-                  c & 3, spartn_auth_len(c &  3));
+                  c & 7, spartn_auth_len(c &  7));
         break;
     case SPARTN_PAYLOAD:
         if (0 == --lexer->length) {
