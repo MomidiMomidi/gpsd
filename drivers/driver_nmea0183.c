@@ -2088,7 +2088,7 @@ static gps_mask_t processGSV(unsigned count, char *field[],
      *  7) 46          Signal-to-noise ratio in decibels
      * <repeat for up to 4 satellites per sentence>
      *   m - 1)        NMEA 4.10 Signal Id (optional), hexadecimal
-     *                 Quecktel Querk: 0 for "All Signa;s".
+     *                 Quecktel Querk: 0 for "All Signals".
      *   m=n-1)        Quectel Querk: System ID (optional)
      *                     4 = BeiDou, 5 = QZSS
      *   n)            checksum
