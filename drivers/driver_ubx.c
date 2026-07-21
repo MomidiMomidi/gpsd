@@ -34,6 +34,7 @@
 #include "../include/driver_ubx.h"
 
 #include "../include/bits.h"       // For UINT2INT()
+#include "../include/crc24q.h"     // For crc24q_hash()
 #include "../include/timespec.h"
 
 // UBX-NAV-PVT, UBX-NAV-PVAT flag bits
@@ -4854,8 +4855,86 @@ static gps_mask_t ubx_msg_rxm_sfrbx(struct gps_device_t *session,
         words[i] = (uint32_t)getleu32(buf, 4 * i + 8);
     }
 
+    if (gnssId == GNSSID_QZSS && numWords == 9) {
+        unsigned prn = svId + 182;
+
+        if (183 <= prn && prn <= 192) {
+            unsigned char be_bytes[36];  // 9 words * 4 bytes = 36 bytes
+            char qzqsm_hex[64];
+            unsigned crc_calc, crc_expected;
+            unsigned satId = prn & 0x3F;
+
+            // Convert 9 LE words to big-endian byte stream
+            // (equivalent to Python: struct.pack('>9I', *words))
+            for (i = 0; i < 9; i++) {
+                be_bytes[i * 4 + 0] = (words[i] >> 24) & 0xFF;
+                be_bytes[i * 4 + 1] = (words[i] >> 16) & 0xFF;
+                be_bytes[i * 4 + 2] = (words[i] >> 8) & 0xFF;
+                be_bytes[i * 4 + 3] = words[i] & 0xFF;
+            }
+
+            // Convert first 250 bits + 2 zero-pad bits = 252 bits = 63 hex chars
+            // First 31 bytes (248 bits) → 62 hex chars
+            for (i = 0; i < 31; i++) {
+                (void)snprintf(&qzqsm_hex[i * 2], 3, "%02X", be_bytes[i]);
+            }
+            // Byte 31: keep top 2 bits (bits 248-249), zero-pad → top nibble
+            (void)snprintf(&qzqsm_hex[62], 2, "%01X",
+                           (be_bytes[31] & 0xC0) >> 4);
+
+            // Verify CRC-24Q:
+            // The DCR message has 226 data bits + 24 CRC bits = 250 bits.
+            // crc24q_hash operates on byte arrays, covering 224 bits (28 bytes).
+            // Then manually feed the remaining 2 bits (bits 224-225).
+            {
+                unsigned crc_partial = crc24q_hash(be_bytes, 28);
+
+                // Feed bits 224-225 (top 2 bits of be_bytes[28])
+                for (i = 0; i < 2; i++) {
+                    int bit = (be_bytes[28] >> (7 - i)) & 1;
+                    crc_partial <<= 1;
+                    if (bit) {
+                        crc_partial |= 1;
+                    }
+                    if (crc_partial & 0x1000000) {
+                        crc_partial ^= 0x1864CFB;
+                    }
+                }
+                crc_partial &= 0xFFFFFF;
+                crc_calc = crc_partial;
+            }
+
+            // Extract the embedded CRC from bits 226-249
+            // Bits 226-249 = bytes 28..31 of be_bytes
+            // Bit 226 starts at be_bytes[28] bit 5 (0-indexed from MSB: bit 226%8=2,
+            // so position 5 from LSB, or bit index 2 from MSB in byte 28)
+            // 226 / 8 = 28, remainder 2 → bit 2 from MSB of byte 28
+            crc_expected = ((unsigned)(be_bytes[28] & 0x3F) << 18) |
+                           ((unsigned)be_bytes[29] << 10) |
+                           ((unsigned)be_bytes[30] << 2) |
+                           ((unsigned)be_bytes[31] >> 6);
+
+            if (crc_calc == crc_expected) {
+                GPSD_LOG(LOG_PROG, &session->context->errout,
+                         "UBX: RXM-SFRBX: QZSS L1S DCR CRC OK "
+                         "svId %u satId %u\n", svId, satId);
+            } else {
+                GPSD_LOG(LOG_WARN, &session->context->errout,
+                         "UBX: RXM-SFRBX: QZSS L1S DCR CRC FAIL "
+                         "svId %u calc 0x%06X expected 0x%06X\n",
+                         svId, crc_calc, crc_expected);
+            }
+
+            session->gpsdata.subframe.is_almanac = SUBFRAME_QZQSM;
+            session->gpsdata.subframe.qzqsm.svid = (int)satId;
+            strlcpy(session->gpsdata.subframe.qzqsm.qzqsm_hex, qzqsm_hex,
+                    sizeof(session->gpsdata.subframe.qzqsm.qzqsm_hex));
+            mask |= SUBFRAME_SET;
+        }
+    }
+
     // do we need freqId or chn?
-    mask = gpsd_interpret_subframe_raw(session, gnssId, sigId,
+    mask |= gpsd_interpret_subframe_raw(session, gnssId, sigId,
                                        svId, words, numWords);
     GPSD_LOG(LOG_IO, &session->context->errout,
 	     "UBX: RXM-SFRBX: mask %s\n",

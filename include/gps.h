@@ -1255,6 +1255,7 @@ struct subframe_t {
     int is_almanac;
 #define SUBFRAME_ALMANAC 1
 #define SUBFRAME_ORBIT 2
+#define SUBFRAME_QZQSM 3
     // generic almanac, ephemeris
     orbit_t orbit;
     // Galileo sends two 1/2 almanacs at one time.  2nd one goes here.
@@ -1485,6 +1486,11 @@ struct subframe_t {
             // sv, SV health status, 6 bits, bitmap
             uint8_t sv[25];
         } sub5_25;
+        // QZSS L1S QZQSM
+        struct {
+            char qzqsm_hex[64];
+            int svid;
+        } qzqsm;
     };
 };
 

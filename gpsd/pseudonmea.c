@@ -491,6 +491,14 @@ static ssize_t gpsd_binary_time_dump(struct gps_device_t *session,
 static void gpsd_binary_almanac_dump(struct gps_device_t *session,
                                      char bufp[], size_t len)
 {
+    if (session->gpsdata.subframe.is_almanac == SUBFRAME_QZQSM) {
+        (void)snprintf(bufp, len, "$QZQSM,%d,%s",
+                       session->gpsdata.subframe.qzqsm.svid,
+                       session->gpsdata.subframe.qzqsm.qzqsm_hex);
+        nmea_add_checksum(bufp);
+        return;
+    }
+
     if (session->gpsdata.subframe.is_almanac) {
         (void)snprintf(bufp, len,
             "$GPALM,1,1,%02d,%04d,%02x,%04x,%02x,%04x,%04x,%05x,"
