@@ -122,11 +122,29 @@ extern "C" {
  *       Add gnssid_t to limit gnssid to valid values.
  *       MAXCHANNELS bumped 230, for SkyTraq
  *       add magnetic_dev, true_track to gps_data_t.
+ *       add path_obf devconfig_t.
  */
 
 // API version should match in SConscript
 #define GPSD_API_MAJOR_VERSION  16       // bump on incompatible changes
 #define GPSD_API_MINOR_VERSION  1        // bump on compatible changes
+
+/* POSIX isXXXXX() are locale dependent, accept an (int), but not all
+ * int give defined results.  So avoid them.  Theseare for ASCII only,
+ * and can take int, unsigned int, char and unsigned char */
+#define ISALPHA(x) (ISLOWER(x) || ISUPPER(x))
+#define ISASCII(x) ((unsigned char)(x) <= 0x7f)
+#define ISCNTRL(x) (0x1f >= (x) || 0x7f == (x))
+#define ISDIGIT(x) ('0' <= (x) && '9' >= (x))
+#define ISLOWER(x) ((x) >= 'a' && (x) <= 'z')
+#define ISPRINT(x) (0x20 <= (x) && 0x7e >= (x))
+// ASCII whitespace (tab through carriage return, plus space)
+#define ISSPACE(x) (0x20 == (x) || (0x09 <= (x) && 0x0d >= (x)))
+#define ISUPPER(x) ((x) >= 'A' && (x) <= 'Z')
+#define ISXDIGIT(x) (ISDIGIT(x) || \
+                     ((x) >= 'a' && (x) <= 'f') || \
+                     ((x) >= 'A' && (x) <= 'F'))
+#define TOUPPER(x) (ISLOWER(x) ? (x) - 'a' + 'A' : (x))
 
 // u-blox 9 tracks 140 signals
 // Skytraq Phoenix tracks 230 signals
@@ -1635,7 +1653,6 @@ struct ais_t
 #define AIS_TYPE6_BINARY_MAX    920     // 920 bits
             size_t bitcount;            // bit count of the data
             union {
-                // cppcheck-suppress arrayIndexOutOfBounds
                 char bitdata[(AIS_TYPE6_BINARY_MAX + 7) / 8];
                 // Inland AIS - ETA at lock/bridge/terminal
                 struct {
@@ -2245,8 +2262,8 @@ struct ais_t
         // Type 14 - Safety-Related Broadcast Message
         struct {
             // unsigned int spare;      // spare bit(s)
-            // 960 bits of six-bit, plus NUL (960 / 6 = 160 chars)
-            char text[161];
+            // 966 bits of six-bit text, plus NUL (966 / 6 = 161 chars)
+            char text[162];
         } type14;
         // Type 15 - Interrogation
         struct {
@@ -2445,6 +2462,7 @@ struct ais_t
         } type24;
         // Type 25 - Addressed Binary Message
         struct {
+            // ITU-R M.1371-5
             bool addressed;             // addressed-vs.broadcast flag
             bool structured;            // structured-binary flag
             unsigned int dest_mmsi;     // destination MMSI
@@ -2755,6 +2773,7 @@ struct version_t {
 #define HEXDATA_MAX 512                 // hex encoded command buffer, max
 struct devconfig_t {
     char path[GPS_PATH_MAX];
+    char path_obf[GPS_PATH_MAX];        // obfuscated path
     int flags;
 #define SEEN_GPS        0x01
 #define SEEN_RTCM2      0x02

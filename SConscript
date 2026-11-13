@@ -2069,7 +2069,7 @@ cgps = env.Program('clients/cgps', ['clients/cgps.c'],
 gps2udp = env.Program('clients/gps2udp', ['clients/gps2udp.c'],
                       LIBS=[libgps_static],
                       parse_flags=gpsflags)
-gpsctl = env.Program('gpsctl', ['gpsctl.c'],
+gpsctl = env.Program('clients/gpsctl', ['clients/gpsctl.c'],
                      LIBS=[libgpsd_static, libgps_static],
                      parse_flags=gpsdflags + gpsflags)
 gpsd = env.Program('gpsd/gpsd', gpsd_sources,
@@ -2175,6 +2175,11 @@ test_packet = env.Program('tests/test_packet',
                            'tests/test_packet.c'],
                           LIBS=[libgpsd_static, libgps_static],
                           parse_flags=gpsdflags)
+test_passthrough = env.Program('tests/test_passthrough',
+                               [libgpsd_static, libgps_static,
+                                'tests/test_passthrough.c'],
+                               LIBS=[libgpsd_static, libgps_static],
+                               parse_flags=gpsdflags)
 test_timespec = env.Program('tests/test_timespec', ['tests/test_timespec.c'],
                             LIBS=[libgpsd_static, libgps_static],
                             parse_flags=gpsdflags)
@@ -2208,6 +2213,7 @@ testprogs = [test_bits,
              test_matrix,
              test_mktime,
              test_packet,
+             test_passthrough,
              test_timespec,
              test_trig]
 if env["libgpsmm"] or cleaning:
@@ -2285,7 +2291,7 @@ env.Command(target="libgps/gps_maskdump.c",
             source=["maskaudit.py", "include/gps.h", "include/gpsd.h"],
             action='''
     rm -f $TARGET &&\
-        $SC_PYTHON $SOURCE -c "${SRCDIR}" > $TARGET &&\
+        $SC_PYTHON $SOURCE "${SRCDIR}" > $TARGET &&\
         chmod a-w $TARGET''')
 
 env.Command(target="libgps/ais_json.i", source="libgps/jsongen.py",
@@ -2917,6 +2923,11 @@ matrix_regress = Utility('matrix-regress', [test_matrix], [
     '"${SRCDIR}/tests/test_matrix" --quiet'
 ])
 
+# Unit-test the JSON passthrough driver
+passthrough_regress = Utility('passthrough-regress', [test_passthrough], [
+    '"${SRCDIR}/tests/test_passthrough" --quiet'
+])
+
 # MIB test
 if have_smilint:
     mib_regress = Utility('mib-regress', [mib_lint], [
@@ -3016,26 +3027,25 @@ rtcm2_logs = ['test/sample.rtcm2', 'test/sample.rtcm2.chk']
 rtcm_regress = Utility('rtcm-regress', [gpsdecode, rtcm2_logs], [
     '@echo "Testing RTCM decoding..."',
     '@for f in "${SRCDIR}/test/"*.rtcm2; do '
-    '    echo "\tTesting $${f}..."; '
-    '    TMPFILE=`mktemp -t gpsd-test.chk-XXXXXXXXXXXXXX`; '
-    '    "${SRCDIR}/clients/gpsdecode" -u -j <"$${f}" >$${TMPFILE}; '
-    '    diff -ub "$${f}".chk $${TMPFILE} || echo "Test FAILED!"; '
-    '    rm -f $${TMPFILE}; '
+    '  echo "\tTesting $${f}..."; '
+    ' "${SRCDIR}/clients/gpsdecode" -u -j <"$${f}" | diff -ub "$${f}".chk - ;'
     'done;',
     '@echo "Testing idempotency of JSON dump/decode for RTCM2"',
     '@TMPFILE=`mktemp -t gpsd-test.chk-XXXXXXXXXXXXXX`; '
     '"${SRCDIR}/clients/gpsdecode" -u -e -j <test/synthetic-rtcm2.json '
     ' >$${TMPFILE}; '
     '    grep -v "^#" test/synthetic-rtcm2.json | diff -ub - $${TMPFILE} '
-    '    || echo "Test FAILED!"; '
+    '    || exit 1; '
     '    rm -f $${TMPFILE}; ',
+    # FIXME: this leaves TMPFILE on test failures.
 ])
 
 # Rebuild the RTCM regression tests.
 Utility('rtcm-makeregress', [gpsdecode], [
     'for f in "${SRCDIR}/test/"*.rtcm2; do '
-    '    "${SRCDIR}/clients/gpsdecode" -j <"$${f}" >"$${f}".chk; '
-    'done'
+    '    "${SRCDIR}/clients/gpsdecode" -u -j <"$${f}" >"$${f}".chk; '
+    'done;'
+    '@echo "You must rebuild test/synthetic-rtcm2.json by hand."',
 ])
 
 # Regression-test the AIVDM decoder.
@@ -3184,6 +3194,7 @@ test_nondaemon = [
     method_regress,
     mib_regress,
     packet_regress,
+    passthrough_regress,
     rtcm_regress,
     test_xgps_deps,
     time_regress,
@@ -3328,13 +3339,13 @@ if not cleaning:
 # Tags for Emacs and vi
 misc_sources = ['clients/cgps.c',
                 'clients/gps2udp.c',
+                'clients/gpsctl.c',
                 'clients/gpsdctl.c',
                 'clients/gpsdecode.c',
                 'clients/gpspipe.c',
                 'clients/gpxlogger.c',
                 'clients/ntpshmmon.c',
                 'clients/ppscheck.c',
-                'gpsctl.c',
                 ]
 sources = libgpsd_sources + libgps_sources + gpsd_sources + gpsmon_sources + \
     misc_sources

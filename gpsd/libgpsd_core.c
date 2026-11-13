@@ -13,7 +13,6 @@
 #include "../include/gpsd_config.h"  // must be before all includes
 
 #include <assert.h>
-#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -312,13 +311,19 @@ void gps_context_init(struct gps_context_t *context,
 
 // initialize GPS polling
 void gpsd_init(struct gps_device_t *session, struct gps_context_t *context,
-               const char *device)
+               const char *device_path)
 {
     (void)memset(session, 0, sizeof(struct gps_device_t));
 
-    if (device != NULL) {
-        (void)strlcpy(session->gpsdata.dev.path, device,
+    if (NULL != device_path) {
+        (void)strlcpy(session->gpsdata.dev.path, device_path,
                       sizeof(session->gpsdata.dev.path));
+        obfuscate_uri(session->gpsdata.dev.path_obf, device_path,
+                      sizeof(session->gpsdata.dev.path_obf));
+    } else {
+        // should fail??
+        session->gpsdata.dev.path[0] = '\0';
+        session->gpsdata.dev.path_obf[0] = '\0';
     }
 
     /* with memset(), no need to set NULLs, or zeros
@@ -461,6 +466,46 @@ void gpsd_clear(struct gps_device_t *session)
     session->pps_thread.context = (void *)session;
 
     session->opentime = time(NULL);
+}
+
+/*
+ * strip "user@example.com:password@" from a uri (device path).
+ * better not be an @ after the host name.
+ *
+ * Needs proper tests.
+ */
+const char *obfuscate_uri(char *dest, const char *uri, size_t dest_sz)
+{
+    const char *at = NULL;
+    const char *last_at = NULL;
+
+    // Find the protocol separator
+    const char* proto_end = strstr(uri, "://");
+    if (!proto_end) {
+        // none
+        return stpncpy(dest, uri, dest_sz);
+    }
+
+    at = proto_end + 3;
+    last_at = NULL;
+    while (at &&
+           '\0' != *at) {
+        at = strchr(at, '@');
+        if (!at) {
+            break;
+        }
+        last_at = at;
+        at++;
+    }
+    if (!last_at) {
+        // No credentials,
+        return stpncpy(dest, uri, dest_sz);
+    }
+
+    (void)snprintf(dest, dest_sz, "%.*sUSER:PASS@%s",
+                   (int)(3 + proto_end - uri), uri, last_at + 1);
+
+    return dest;
 }
 
 /* split s into host and service parts
