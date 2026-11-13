@@ -424,7 +424,7 @@ static gps_mask_t handle_0xb1(struct gps_device_t *session)
 
     // Nav mode
     nav_mode = (uint8_t) getub(buf, 22);
-    if (-nav_mode & 0x80) {
+    if (0 == (nav_mode & 0x80)) {
         session->newdata.status = STATUS_UNK;
         session->newdata.mode = MODE_NO_FIX;
     } else {
@@ -492,7 +492,7 @@ static gps_mask_t handle_0xb1(struct gps_device_t *session)
              "Navcom: received packet type 0xb1 (PVT Report)\n");
     GPSD_LOG(LOG_DATA, &session->context->errout,
              "Navcom: navigation mode %s (0x%02x) - %s - %s\n",
-             ((-nav_mode & 0x80)!='\0' ? "invalid" : "valid"), nav_mode,
+             (0 == (nav_mode & 0x80) ? "invalid" : "valid"), nav_mode,
              ((nav_mode & 0x40)!='\0' ? "3D" : "2D"),
              ((nav_mode & 0x03)!='\0' ? "DGPS" : "GPS"));
     GPSD_LOG(LOG_DATA, &session->context->errout,
@@ -1306,7 +1306,7 @@ static bool navcom_speed(struct gps_device_t *session,
 {
     // parity and stopbit switching aren't implemented
     if (parity != session->gpsdata.dev.parity
-        || stopbits != (int)session->gpsdata.dev.parity) {
+        || stopbits != (int)session->gpsdata.dev.stopbits) {
         return false;
     } else {
         uint8_t port, port_selection;

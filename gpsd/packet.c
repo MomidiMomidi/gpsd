@@ -33,7 +33,6 @@ PERMISSIONS
 #include "../include/gpsd_config.h"  // must be before all includes
 
 #include <arpa/inet.h>          // for htons()
-#include <ctype.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <stdbool.h>
@@ -421,8 +420,8 @@ static bool nmea_checksum(const struct gpsd_errout_t *errout,
 
     /* Verify checksum is 2 hex digits.  Irnoge trailing stuff.
      * Magellan EC-10X has lower case hex in checksum. It is rare.  */
-    if (!isxdigit((unsigned char) end[1]) ||
-        !isxdigit((unsigned char) end[2])) {
+    if (!ISXDIGIT(end[1]) ||
+        !ISXDIGIT(end[2])) {
         return false;
     }
 
@@ -431,8 +430,8 @@ static bool nmea_checksum(const struct gpsd_errout_t *errout,
         csum ^= buf[n];
     }
     (void)snprintf(csum_s, sizeof(csum_s), "%02X", csum);
-    checksum_ok = (csum_s[0] == toupper((int)end[1]) &&
-                   csum_s[1] == toupper((int)end[2]));
+    checksum_ok = (csum_s[0] == TOUPPER(end[1]) &&
+                   csum_s[1] == TOUPPER(end[2]));
     if (!checksum_ok) {
         GPSD_LOG(LOG_WARN, errout,
                  "bad checksum in NMEA packet; got %c%c expected %s.\n",
@@ -464,7 +463,7 @@ static bool character_pushback(struct gps_lexer_t *lexer,
         GPSD_LOG(LOG_RAW, &lexer->errout,
                  "%08ld: character '%c' [%02x]  pushed back, state set to %s\n",
                  lexer->char_counter,
-                 (isprint((int)c) ? c : '.'), c,
+                 (ISPRINT(c) ? c : '.'), c,
                  state_table[lexer->state]);
     }
 
@@ -632,7 +631,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         } else if ('\r' == c ||
                    '\t' == c) {
             // allow tabs and CR in comments
-        } else if (!isprint(c)) {
+        } else if (!ISPRINT(c)) {
             GPSD_LOG(LOG_RAW, &lexer->errout, "COMMENT: x%x\n", c);
             return character_pushback(lexer, GROUND_STATE);
         }
@@ -709,7 +708,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
     case NMEA_VENDOR_LEAD:
         if ('A' == c) {            // $PA
             lexer->state = NMEA_PASHR_A;
-        } else if (isalpha(c)) {
+        } else if (ISALPHA(c)) {
             lexer->state = NMEA_LEADER_END;
         } else {
             (void) character_pushback(lexer, GROUND_STATE);
@@ -723,7 +722,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
     case NMEA_PASHR_A:
         if ('S' == c) {        // $PAS
             lexer->state = NMEA_PASHR_S;
-        } else if (isalpha(c)) {
+        } else if (ISALPHA(c)) {
             lexer->state = NMEA_LEADER_END;
         } else {
             (void)character_pushback(lexer, GROUND_STATE);
@@ -732,7 +731,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
     case NMEA_PASHR_S:
         if ('H' == c) {        // $PASH
             lexer->state = NMEA_PASHR_H;
-        } else if (isalpha(c)) {
+        } else if (ISALPHA(c)) {
             lexer->state = NMEA_LEADER_END;
         } else {
             (void)character_pushback(lexer, GROUND_STATE);
@@ -741,7 +740,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
     case NMEA_PASHR_H:
         if ('R' == c) {         // $PASHR
             lexer->state = NMEA_BINARY_BODY;
-        } else if (isalpha(c)) {
+        } else if (ISALPHA(c)) {
             lexer->state = NMEA_LEADER_END;
         } else {
             (void) character_pushback(lexer, GROUND_STATE);
@@ -789,7 +788,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         }
         break;
     case AIS_LEAD_2:
-        if (isalpha(c)) {
+        if (ISALPHA(c)) {
             lexer->state = AIS_LEADER_END;
         } else {
             return character_pushback(lexer, GROUND_STATE);
@@ -804,7 +803,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         }
         break;
     case AIS_LEAD_ALT2:
-        if (isalpha(c)) {
+        if (ISALPHA(c)) {
             lexer->state = AIS_LEADER_END;
         } else {
             return character_pushback(lexer, GROUND_STATE);
@@ -819,7 +818,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         }
         break;
     case AIS_LEAD_ALT4:
-        if (isalpha(c)) {
+        if (ISALPHA(c)) {
             lexer->state = AIS_LEADER_END;
         } else {
             return character_pushback(lexer, GROUND_STATE);
@@ -833,7 +832,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
             /* not strictly correct (missing \r), but helps with
              * interpreting logfiles. */
             lexer->state = AIS_RECOGNIZED;
-        } else if (!isprint(c)) {
+        } else if (!ISPRINT(c)) {
             (void)character_pushback(lexer, GROUND_STATE);
         }
         break;
@@ -878,7 +877,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
             break;
 #endif  // GARMINTXT_ENABLE
         default:
-            if (!isprint(c)) {
+            if (!ISPRINT(c)) {
                 return character_pushback(lexer, GROUND_STATE);
             }
         }
@@ -898,7 +897,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
 #else
             (void)character_pushback(lexer, GROUND_STATE);
 #endif
-        } else if (!isprint(c)) {
+        } else if (!ISPRINT(c)) {
             (void)character_pushback(lexer, GROUND_STATE);
         }
         break;
@@ -1429,7 +1428,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
 #endif  // SUPERSTAR2_ENABLE
 #ifdef ONCORE_ENABLE
     case ONCORE_AT2:
-        if (isupper(c)) {
+        if (ISUPPER(c)) {
             lexer->length = (size_t)c;
             lexer->state = ONCORE_ID1;
         } else {
@@ -1437,7 +1436,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         }
         break;
     case ONCORE_ID1:
-        if (!isalpha(c)) {
+        if (!ISALPHA(c)) {
             return character_pushback(lexer, GROUND_STATE);
         }
         lexer->length =
@@ -2039,7 +2038,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
     case GREIS_EXPECTED:
         FALLTHROUGH
     case GREIS_RECOGNIZED:
-        if (!isascii(c)) {
+        if (!ISASCII(c)) {
             return character_pushback(lexer, GROUND_STATE);
         }
         if ('#' == c) {
@@ -2061,7 +2060,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         lexer->state = GREIS_REPLY_2;
         break;
     case GREIS_ID_1:
-        if (!isascii(c)) {
+        if (!ISASCII(c)) {
             return character_pushback(lexer, GROUND_STATE);
         }
         lexer->state = GREIS_ID_2;
@@ -2069,21 +2068,21 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
     case GREIS_REPLY_2:
         FALLTHROUGH
     case GREIS_ID_2:
-        if (!isxdigit(c)) {
+        if (!ISXDIGIT(c)) {
             return character_pushback(lexer, GROUND_STATE);
         }
         lexer->length = greis_hex2bin(c) << 8;
         lexer->state = GREIS_LENGTH_1;
         break;
     case GREIS_LENGTH_1:
-        if (!isxdigit(c)) {
+        if (!ISXDIGIT(c)) {
             return character_pushback(lexer, GROUND_STATE);
         }
         lexer->length += greis_hex2bin(c) << 4;
         lexer->state = GREIS_LENGTH_2;
         break;
     case GREIS_LENGTH_2:
-        if (!isxdigit(c)) {
+        if (!ISXDIGIT(c)) {
             return character_pushback(lexer, GROUND_STATE);
         }
         lexer->length += greis_hex2bin(c);
@@ -2191,7 +2190,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
             lexer->json_after = JSON_END_ATTRIBUTE;
             break;
         default:
-            if (isspace(c)) {
+            if (ISSPACE(c)) {
                 break;
             }
             GPSD_LOG(LOG_RAW1, &lexer->errout,
@@ -2211,7 +2210,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         lexer->state = JSON_STRINGLITERAL;
         break;
     case JSON_END_ATTRIBUTE:
-        if (isspace(c)) {
+        if (ISSPACE(c)) {
             break;
         }
         if (':' == c) {
@@ -2222,7 +2221,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         }
         break;
     case JSON_EXPECT_VALUE:
-        if (isspace(c)) {
+        if (ISSPACE(c)) {
             break;
         }
         switch (c) {
@@ -2294,7 +2293,7 @@ static bool nextstate(struct gps_lexer_t *lexer, unsigned char c)
         }
         break;
     case JSON_END_VALUE:
-        if (isspace(c)) {
+        if (ISSPACE(c)) {
             break;
         }
         if ('}' == c ||
@@ -2486,7 +2485,7 @@ void packet_parse(struct gps_lexer_t *lexer)
         }
         GPSD_LOG(LOG_RAW, &lexer->errout,
                  "%08ld: character '%c' [%02x], %s -> %s\n",
-                 lexer->char_counter, (isprint(c) ? c : '.'), c,
+                 lexer->char_counter, (ISPRINT(c) ? c : '.'), c,
                  state_table[oldstate], state_table[lexer->state]);
         lexer->char_counter++;
         inbuflen = lexer->inbufptr - lexer->inbuffer;
@@ -2884,13 +2883,13 @@ void packet_parse(struct gps_lexer_t *lexer)
                 pkt_id = (lexer->inbuffer[idx + 3] << 4) |
                          (lexer->inbuffer[idx + 4] >> 4);
 
-                // print the inbuffer packet, +3 to peek ahead. (maybe)
+                // print the inbuffer packet
                 GPSD_LOG(LOG_IO, &lexer->errout,
                          "RTCM3 data_len %u type %u idx %u inbufflen %u "
                          " buf %s\n",
                          data_len, pkt_id, idx, inbuflen,
                          gps_hexdump(outbuf, sizeof(outbuf),
-                                     &lexer->inbuffer[idx], data_len + 6 + 3));
+                                     &lexer->inbuffer[idx], data_len + 6));
             }
 
             // The CRC includes the preamble, and data.
@@ -2901,9 +2900,9 @@ void packet_parse(struct gps_lexer_t *lexer)
                          "RTCM3 data crc failure, "
                          "%0x against %02x %02x %02x\n",
                          crc24q_hash(&lexer->inbuffer[idx], data_len + 3),
-                         lexer->inbufptr[idx + data_len + 1],
-                         lexer->inbufptr[idx + data_len + 2],
-                         lexer->inbufptr[idx + data_len + 3]);
+                         lexer->inbuffer[idx + data_len + 3],
+                         lexer->inbuffer[idx + data_len + 4],
+                         lexer->inbuffer[idx + data_len + 5]);
                 packet_type = BAD_PACKET;
             }
             acc_dis = ACCEPT;

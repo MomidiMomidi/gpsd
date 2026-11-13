@@ -5,9 +5,10 @@
  *
  */
 
-#undef USE_QT       // this progtam does not work with QT. Pacify Codacy
+// this progtam does not work with QT. Pacify Codacy
+#undef USE_QT
 
-#include "include/gpsd_config.h"  // must be before all includes
+#include "../include/gpsd_config.h"  // must be before all includes
 
 #include <assert.h>
 #include <errno.h>
@@ -19,13 +20,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>       // for strlcat() and strlcpy()
+#include <string.h>  // for strlcat() and strlcpy()
 #include <sys/select.h>
 #include <sys/time.h>
 #include <time.h>
-#include <unistd.h>       // for _exit() and getopt()
+#include <unistd.h>  // for _exit() and getopt()
 
-#include "include/gpsd.h"
+#include "../include/gpsd.h"
 
 #ifdef SHM_EXPORT_ENABLE
 #include <sys/ipc.h>
@@ -36,7 +37,7 @@
 
 static int debuglevel;
 static bool explicit_timeout = false;
-static unsigned int timeout = 0;        // no timeout
+static unsigned int timeout = 0;  // no timeout
 static struct gps_context_t context;
 static bool hunting = true;
 
@@ -69,7 +70,7 @@ static void settle(struct gps_device_t *session)
  * failure return (due to, for example, a missing driver method) is
  * immediate, but successful responses have unpredictable lag.
  */
-#define NON_ERROR 0       // must be distinct from any gps_mask_t value
+#define NON_ERROR 0  // must be distinct from any gps_mask_t value
 
 // send a query to gpsd and wait on an expected response type
 static bool gps_query(struct gps_data_t *gpsdata,
@@ -92,7 +93,7 @@ static bool gps_query(struct gps_data_t *gpsdata,
     (void)sigprocmask(SIG_BLOCK, &blockset, &oldset);
 
     va_start(ap, fmt);
-    (void)vsnprintf(buf, sizeof(buf)-2, fmt, ap);
+    (void)vsnprintf(buf, sizeof(buf) - 2, fmt, ap);
     va_end(ap);
     // codacy does not like strlen()
     if ('\n' != buf[strnlen(buf, sizeof(buf) - 1) - 1]) {
@@ -204,47 +205,53 @@ static void usage(void)
 {
     (void)printf("usage: gpsctl [OPTIONS] [device]\n\n"
 #ifdef HAVE_GETOPT_LONG
-         "  --binary            Switch device to native binary mode.\n"
-         "  --debug DEBUGLEVEL  Set debug level to DEBUGLEVEL.\n"
-         "  --direct            Force direct access to the device.\n"
-         "  --echo              Echo specified control string with wrapper.\n"
-         "  --help              Show this help, then exit\n"
-         "  --list              List known device types and exit.\n"
-         "  --nmea              Switch device to NMEA mode.\n"
-         "  --rate RATE         Change receiver cycle time to RATE.\n"
-         "  --reset             Force reset to default mode.\n"
+                 "  --binary            Switch device to native binary mode.\n"
+                 "  --debug DEBUGLEVEL  Set debug level to DEBUGLEVEL.\n"
+                 "  --direct            Force direct access to the device.\n"
+                 "  --echo              "
+                 "Echo specified control string with wrapper.\n"
+                 "  --help              Show this help, then exit\n"
+                 "  --list              List known device types and exit.\n"
+                 "  --nmea              Switch device to NMEA mode.\n"
+                 "  --rate RATE         Change receiver cycle time to RATE.\n"
+                 "  --reset             Force reset to default mode.\n"
 #ifdef SHM_EXPORT_ENABLE
-         "  --rmshm             Remove the SHM export segment and exit.\n"
+                 "  --rmshm             "
+                 "Remove the SHM export segment and exit.\n"
 #endif   // SHM_EXPORT_ENABLE
-         "  --ship CONTROL      Ship specified control string.\n"
-         "  --speed SPEED       Set device speed to SPEED.\n"
-         "  --timeout TIMEOUT   Set the timeout on packet recognition.\n"
-         "  --type DEVTYPE      Force the device type.\n"
-         "  --version           Show version, then exit\n"
+                 "  --ship CONTROL      Ship specified control string.\n"
+                 "  --speed SPEED       Set device speed to SPEED.\n"
+                 "  --timeout TIMEOUT   "
+                 "Set the timeout on packet recognition.\n"
+                 "  --type DEVTYPE      Force the device type.\n"
+                 "  --version           Show version, then exit\n"
 #endif   // HAVE_GETOPT_LONG
-         "  -?                  Show this help, then exit\n"
-         "  -b                  Switch device to native binary mode.\n"
-         "  -c RATE             Change receiver cycle time to RATE.\n"
-         "  -D DEBUGLEVEL       Set debug level to DEBUGLEVEL.\n"
-         "  -e                  Echo specified control string with wrapper.\n"
-         "  -f                  Force direct access to the device.\n"
-         "  -h                  Show this help, then exit\n"
-         "  -l                  List known device types and exit.\n"
-         "  -n                  Switch device to NMEA mode.\n"
+                 "  -?                  Show this help, then exit\n"
+                 "  -b                  Switch device to native binary mode.\n"
+                 "  -c RATE             Change receiver cycle time to RATE.\n"
+                 "  -D DEBUGLEVEL       Set debug level to DEBUGLEVEL.\n"
+                 "  -e                  "
+                 "Echo specified control string with wrapper.\n"
+                 "  -f                  Force direct access to the device.\n"
+                 "  -h                  Show this help, then exit\n"
+                 "  -l                  List known device types and exit.\n"
+                 "  -n                  Switch device to NMEA mode.\n"
 #ifdef SHM_EXPORT_ENABLE
-         "  -R                  Remove the SHM export segment and exit.\n"
+                 "  -R                  "
+                 "Remove the SHM export segment and exit.\n"
 #endif   // SHM_EXPORT_ENABLE
-         "  -r                  Force reset to default mode.\n"
-         "  -s SPEED            Set device speed to SPEED.\n"
-         "  -t DEVTYPE          Force the device type.\n"
-         "  -T TIMEOUT          Set the timeout on packet recognition.\n"
-         "  -V                  Show version, then exit\n"
-         "  -x CONTROL          Ship specified control string.\n");
+                 "  -r                  Force reset to default mode.\n"
+                 "  -s SPEED            Set device speed to SPEED.\n"
+                 "  -t DEVTYPE          Force the device type.\n"
+                 "  -T TIMEOUT          "
+                 "Set the timeout on packet recognition.\n"
+                 "  -V                  Show version, then exit\n"
+                 "  -x CONTROL          Ship specified control string.\n");
 }
 
 int main(int argc, char **argv)
 {
-    static struct gps_device_t session;        // zero this too
+    static struct gps_device_t session;  // zero this too
     int ch, status;
     char *device = NULL, *devtype = NULL;
     char *speed = NULL, *ship = NULL, *rate = NULL;
@@ -279,7 +286,7 @@ int main(int argc, char **argv)
         {NULL, 0, NULL, 0},
     };
 #endif
-    const char *shmkey_s = getenv("GPSD_SHM_KEY");;
+    const char *shmkey_s = getenv("GPSD_SHM_KEY");
     long shmkey = GPSD_SHM_KEY;
     if (NULL != shmkey_s) {
         long tmp = strtol(shmkey_s, NULL, 0);
@@ -303,26 +310,26 @@ int main(int argc, char **argv)
         }
 
         switch (ch) {
-        case 'b':               // switch to vendor binary mode
+        case 'b':                  // switch to vendor binary mode
             to_binary = true;
             break;
         case 'c':
             rate = optarg;
             break;
-        case 'D':               // set debugging level
+        case 'D':                  // set debugging level
             debuglevel = atoi(optarg);
             context.errout.debug = debuglevel;
             gps_enable_debug(debuglevel, stderr);
             break;
-        case 'e':               // echo specified control string with wrapper
+        case 'e':                  // echo specified control string with wrapper
             lowlevel = true;
-            control_stdout = true;  // Prevent message going to stdout
+            control_stdout = true; // Prevent message going to stdout
             echo = true;
             break;
-        case 'f':               // force direct access to the device
+        case 'f':                  // force direct access to the device
             lowlevel = true;
             break;
-        case 'l':               // list known device types
+        case 'l':                  // list known device types
             for (dp = gpsd_drivers; *dp; dp++) {
                 if (NULL != (*dp)->mode_switcher) {
                     (void)fputs("-[bn]\t", stdout);
@@ -347,18 +354,18 @@ int main(int argc, char **argv)
                 (void)puts((*dp)->type_name);
             }
             exit(EXIT_SUCCESS);
-        case 'n':               // switch to NMEA mode
+        case 'n':  // switch to NMEA mode
             to_nmea = true;
             break;
 #ifdef SHM_EXPORT_ENABLE
-        case 'R':               // remove the SHM export segment
+        case 'R':  // remove the SHM export segment
             status = shmget(shmkey, 0, 0);
             if (-1 == status) {
                 GPSD_LOG(LOG_WARN, &context.errout,
                          "GPSD SHM segment does not exist.\n");
                 exit(1);
             }
-            //  else
+            // else
             status = shmctl(status, IPC_RMID, NULL);
             if (-1 == status) {
                 GPSD_LOG(LOG_ERROR, &context.errout,
@@ -368,25 +375,25 @@ int main(int argc, char **argv)
             }
             exit(0);
 #endif  // SHM_EXPORT_ENABLE
-        case 'r':               // force-switch to default mode
+        case 'r':             // force-switch to default mode
             reset = true;
-            lowlevel = false;   // so we'll abort if the daemon is running
+            lowlevel = false; // so we'll abort if the daemon is running
             break;
-        case 's':               // change output baud rate
+        case 's':             // change output baud rate
             speed = optarg;
             break;
-        case 'T':               // set the timeout on packet recognition
+        case 'T':             // set the timeout on packet recognition
             timeout = (unsigned)atoi(optarg);
             explicit_timeout = true;
             break;
-        case 't':               // force the device type
+        case 't':             // force the device type
             devtype = optarg;
             // experimental kluge
             if (0 == strcmp(devtype, "u-blox")) {
                 timeout = 2;
             }
             break;
-        case 'x':               // ship specified control string
+        case 'x':             // ship specified control string
             ship = optarg;
             if (0 >= (cooklen = hex_escapes(cooked, ship))) {
                 GPSD_LOG(LOG_ERROR, &context.errout,
@@ -433,7 +440,7 @@ int main(int argc, char **argv)
         } else if (1 == matchcount) {
             assert(NULL != forcetype);
             GPSD_LOG( LOG_PROG,&context.errout,
-                     "%s driver selected.\n", forcetype->type_name);
+                      "%s driver selected.\n", forcetype->type_name);
         } else {
             forcetype = NULL;
             GPSD_LOG(LOG_ERROR, &context.errout,
@@ -480,7 +487,7 @@ int main(int argc, char **argv)
             (void)gps_close(&gpsdata);
             exit(EXIT_FAILURE);
         }
-        //  else
+        // else
         if (1 < gpsdata.devices.ndevices &&
             NULL == device) {
             GPSD_LOG(LOG_ERROR, &context.errout,
@@ -515,7 +522,7 @@ int main(int argc, char **argv)
 
         // if the device has not identified, watch it until it does so
         if ('\0' == gpsdata.dev.driver[0]) {
-            if (-1 == gps_stream(&gpsdata, WATCH_ENABLE|WATCH_JSON, NULL)) {
+            if (-1 == gps_stream(&gpsdata, WATCH_ENABLE | WATCH_JSON, NULL)) {
                 GPSD_LOG(LOG_ERROR, &context.errout, "stream set failed.\n");
                 (void)gps_close(&gpsdata);
                 exit(EXIT_FAILURE);
@@ -524,15 +531,15 @@ int main(int argc, char **argv)
             while (0 < devcount) {
                 // Wait for input data
                 if (!gps_waiting(&gpsdata, timeout * 1000000)) {
-                        GPSD_LOG(LOG_ERROR, &context.errout,
-                                 "timed out waiting for device\n");
-                        (void)gps_close(&gpsdata);
-                        exit(EXIT_FAILURE);
+                    GPSD_LOG(LOG_ERROR, &context.errout,
+                             "timed out waiting for device\n");
+                    (void)gps_close(&gpsdata);
+                    exit(EXIT_FAILURE);
                 }
                 errno = 0;
                 if (0 > gps_read(&gpsdata, NULL, 0)) {
                     GPSD_LOG(LOG_ERROR, &context.errout,
-                            "data read failed.\n");
+                             "data read failed.\n");
                     (void)gps_close(&gpsdata);
                     exit(EXIT_FAILURE);
                 }
@@ -549,7 +556,7 @@ int main(int argc, char **argv)
             GPSD_LOG(LOG_ERROR, &context.errout, "data read failed.\n");
             (void)gps_close(&gpsdata);
             exit(EXIT_FAILURE);
-        matching_device_seen:;
+matching_device_seen:;
         }
 
         // sanity check
@@ -614,10 +621,11 @@ int main(int argc, char **argv)
                          "%s mode change to native mode failed\n",
                          gpsdata.dev.path);
                 status = 1;
-            } else
+            } else {
                 GPSD_LOG(LOG_PROG, &context.errout,
                          "%s mode change succeeded\n",
                          gpsdata.dev.path);
+            }
         }
         if (NULL != ship) {
             char buf[BUFSIZ];
@@ -628,7 +636,7 @@ int main(int argc, char **argv)
             (void)gps_query(&gpsdata,
                             DEVICE_SET, (int)timeout,
                             "?DEVICE={\"path\":\"%s\",\"hexdata\":\"%s\"}\r\n",
-                             device, buf);
+                            device, buf);
             // wait for response?
         }
         if (NULL != speed) {
@@ -638,7 +646,7 @@ int main(int argc, char **argv)
                 (void)gps_query(&gpsdata,
                                 DEVICE_SET, (int)timeout,
                                 "?DEVICE={\"path\":\"%s\",\"bps\":%s}\r\n",
-                                 device, speed);
+                                device, speed);
             } else {
                 char *modespec = strchr(speed, ':');
                 status = 0;
@@ -662,12 +670,13 @@ int main(int argc, char **argv)
                         status = 1;
                     }
                 }
-                if (0 == status)
+                if (0 == status) {
                     (void)gps_query(&gpsdata,
                                     DEVICE_SET, (int)timeout,
-                                     "?DEVICE={\"path\":\"%s\",\"bps\":%s,"
-                                     "\"parity\":\"%c\",\"stopbits\":%c}\r\n",
-                                     device, speed, parity, stopbits);
+                                    "?DEVICE={\"path\":\"%s\",\"bps\":%s,"
+                                    "\"parity\":\"%c\",\"stopbits\":%c}\r\n",
+                                    device, speed, parity, stopbits);
+                }
             }
             if (atoi(speed) != (int)gpsdata.dev.baudrate) {
                 GPSD_LOG(LOG_ERROR, &context.errout,
@@ -693,18 +702,20 @@ int main(int argc, char **argv)
     } else if (reset) {
         // hard reset will go through lower-level operations
         // FIXME: missing speeds, should come from a header.
-        const int speeds[] = {4800, 9600, 19200, 38400, 57600, 115200, 230400,
-                              460800, 921600};
-        static struct gps_device_t      session;        // zero this too
+        const int speeds[] = {
+            4800, 9600, 19200, 38400, 57600, 115200, 230400,
+            460800, 921600
+        };
+        static struct gps_device_t session;  // zero this too
         unsigned i;
 
         if (NULL == device ||
             NULL == forcetype) {
-                GPSD_LOG(LOG_ERROR, &context.errout,
-                         "device and type must be specified for the "
-                         "reset operation.\n");
-                exit(EXIT_FAILURE);
-            }
+            GPSD_LOG(LOG_ERROR, &context.errout,
+                     "device and type must be specified for the "
+                     "reset operation.\n");
+            exit(EXIT_FAILURE);
+        }
 
         context.errout.debug = debuglevel;
         session.context = &context;
@@ -744,7 +755,7 @@ int main(int argc, char **argv)
 
     gps_context_init(&context, "gpsctl");
     context.errout.debug = debuglevel;
-    session.context = &context;     // in case gps_init isn't called
+    session.context = &context;  // in case gps_init isn't called
 
     if (echo) {
         context.readonly = true;
@@ -775,7 +786,7 @@ int main(int argc, char **argv)
         if (0 > activated) {
             if (PLACEHOLDING_FD == activated) {
                 (void)printf("%s identified as a %s.\n",
-                   device, gpsd_id(&session));
+                             device, gpsd_id(&session));
                 exit(EXIT_SUCCESS);
             }
             GPSD_LOG(LOG_ERROR, &context.errout,
@@ -787,7 +798,7 @@ int main(int argc, char **argv)
                  "device %s activated\n", session.gpsdata.dev.path);
         FD_SET(session.gpsdata.gps_fd, &all_fds);
         if (session.gpsdata.gps_fd > maxfd) {
-             maxfd = session.gpsdata.gps_fd;
+            maxfd = session.gpsdata.gps_fd;
         }
 
         // initialize the GPS context's time fields
@@ -796,7 +807,7 @@ int main(int argc, char **argv)
         // grab packets until we time out, get sync, or fail sync
         for (hunting = true; hunting; ) {
             fd_set efds;
-            timespec_t ts_timeout = {2, 0};   // timeout for pselect()
+            timespec_t ts_timeout = {2, 0};  // timeout for pselect()
             switch(gpsd_await_data(&rfds, &efds, maxfd, &all_fds,
                                    &context.errout, ts_timeout)) {
             case AWAIT_GOT_INPUT:
@@ -814,7 +825,7 @@ int main(int argc, char **argv)
             }
 
             switch(gpsd_multipoll(FD_ISSET(session.gpsdata.gps_fd, &rfds),
-                                           &session, ctlhook, 0)) {
+                                  &session, ctlhook, 0)) {
             case DEVICE_READY:
                 FD_SET(session.gpsdata.gps_fd, &all_fds);
                 break;
@@ -925,7 +936,7 @@ int main(int argc, char **argv)
                          "Stop bits must be 1 or 2.\n");
                 status = 1;
             }
-            stopbits = (int)(stopbits-'0');
+            stopbits = (int)(stopbits - '0');
         }
         if (0 == status) {
             if (NULL == session.device_type->speed_switcher) {
@@ -934,9 +945,9 @@ int main(int argc, char **argv)
                          session.device_type->type_name);
                 status = 1;
             } else if (session.device_type->speed_switcher(&session,
-                                                       (speed_t)atoi(speed),
-                                                       parity,
-                                                       stopbits)) {
+                                                           (speed_t)atoi(speed),
+                                                           parity,
+                                                           stopbits)) {
                 settle(&session);
                 GPSD_LOG(LOG_PROG, &context.errout,
                          "%s change to %s%c%d succeeded\n",

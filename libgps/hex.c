@@ -6,7 +6,6 @@
 #include "../include/gpsd_config.h"   // must be before all includes
 
 #include <assert.h>
-#include <ctype.h>
 #include <string.h>
 
 #include "../include/gpsd.h"
@@ -35,10 +34,9 @@ const char *gpsd_packetdump(char *scbuf, size_t scbuflen,
         return "";
     }
     for (cp = binbuf; cp < binbuf + binbuflen; cp++) {
-        // Careful, isprint() is locale specific.
         if (0x7f <= *cp ||
-            (!isprint(*cp) &&
-             !isspace(*cp))) {
+            (!ISPRINT(*cp) &&
+             !ISSPACE(*cp))) {
             // some non-printable, do it the hard way.
             return gps_hexdump(scbuf, scbuflen, binbuf, binbuflen);
         }
@@ -56,12 +54,12 @@ const char *gpsd_packetdump(char *scbuf, size_t scbuflen,
  * Return scbuf
  */
 const char *gps_hexdump(char *scbuf, size_t scbuflen,
-                        const unsigned  char *binbuf, size_t binbuflen)
+                        const unsigned char *binbuf, size_t binbuflen)
 {
     size_t i, j = 0;
     size_t len =
         (size_t)((binbuflen >
-                   MAX_PACKET_LENGTH) ? MAX_PACKET_LENGTH : binbuflen);
+                  MAX_PACKET_LENGTH) ? MAX_PACKET_LENGTH : binbuflen);
     const char *hexchar = "0123456789abcdef";
 
     if (NULL == binbuf ||
@@ -165,7 +163,7 @@ ssize_t hex_escapes(char *cooked, const char *raw)
             *cookend++ = '\r';
             break;
         case 't':
-            *cookend++ = '\r';
+            *cookend++ = '\t';
             break;
         case 'v':
             *cookend++ = '\v';
@@ -314,7 +312,7 @@ ssize_t hex_escapes(char *cooked, const char *raw)
 // copy inbuf string to outbuf, replacingg non-printing characters
 // slow, but only used for debug output
 char *gps_visibilize(char *outbuf, size_t outlen,
-                      const char *inbuf, size_t inlen)
+                     const char *inbuf, size_t inlen)
 {
     const char *sp;
     size_t next = 0;
@@ -323,7 +321,7 @@ char *gps_visibilize(char *outbuf, size_t outlen,
     // FIXME!! snprintf() when strlcat() will do!
     for (sp = inbuf; sp < inbuf + inlen && (next + 6) < outlen; sp++) {
         int ret;
-        if (isprint((unsigned char)*sp)) {
+        if (ISPRINT(*sp)) {
             ret = snprintf(&outbuf[next], 2, "%c", *sp);
         } else {
             ret = snprintf(&outbuf[next], 6, "\\x%02x",
